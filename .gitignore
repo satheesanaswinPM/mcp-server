@@ -9,5 +9,6 @@ __pycache__/
 .venv/
 venv/
 .env
+railway-google.env
 .idea/
 .vscode/
