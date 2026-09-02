@@ -90,11 +90,20 @@ def require_approval(action: str, payload: dict[str, Any]) -> None:
 
 
 @app.get("/")
-def root() -> dict[str, str]:
+def root() -> dict[str, Any]:
+    # Lightweight deploy probe (no Google API calls).
+    has_env_auth = bool(
+        os.getenv("GOOGLE_CLIENT_ID", "").strip()
+        and os.getenv("GOOGLE_CLIENT_SECRET", "").strip()
+        and os.getenv("GOOGLE_REFRESH_TOKEN", "").strip()
+    )
     return {
         "status": "ok",
         "message": "Google MCP Server is running",
         "endpoints": "/append_to_doc, /create_email_draft, /docs",
+        "build": "option-b-auth-env-v1",
+        "auto_approve": _should_auto_approve(),
+        "google_env_auth_configured": has_env_auth,
     }
 
 
