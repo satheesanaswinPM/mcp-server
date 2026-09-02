@@ -42,6 +42,10 @@ def _should_auto_approve() -> bool:
     gate, require_approval() crashes with EOFError and returns HTTP 500.
     Some containers still report a pseudo-TTY, so also detect Railway env vars.
     """
+    # Deployment docs use REQUIRE_APPROVAL=false on Railway.
+    require_approval = os.getenv("REQUIRE_APPROVAL", "").strip().lower()
+    if require_approval in {"0", "false", "no", "off"}:
+        return True
     if _env_flag("AUTO_APPROVE"):
         return True
     # Opt into interactive prompts only when explicitly requested.
@@ -62,7 +66,10 @@ def require_approval(action: str, payload: dict[str, Any]) -> None:
     print("=" * 60)
 
     if _should_auto_approve():
-        if _env_flag("AUTO_APPROVE"):
+        require_approval_flag = os.getenv("REQUIRE_APPROVAL", "").strip().lower()
+        if require_approval_flag in {"0", "false", "no", "off"}:
+            reason = "REQUIRE_APPROVAL=false"
+        elif _env_flag("AUTO_APPROVE"):
             reason = "AUTO_APPROVE"
         elif os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID"):
             reason = "railway"
