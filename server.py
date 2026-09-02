@@ -10,19 +10,24 @@ from typing import Any
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, EmailStr, Field
 
-from docs_tool import append_to_doc
+from docs_tool import append_to_doc, replace_doc
 from gmail_tool import create_email_draft
 
 app = FastAPI(
     title="Google MCP Server",
     description="MCP-style FastAPI server for Google Docs and Gmail.",
-    version="1.0.0",
+    version="1.1.0",
 )
 
 
 class AppendToDocRequest(BaseModel):
     doc_id: str = Field(..., description="Google Docs document ID")
     content: str = Field(..., description="Text to append to the document")
+
+
+class ReplaceDocRequest(BaseModel):
+    doc_id: str = Field(..., description="Google Docs document ID")
+    content: str = Field(..., description="Full text that replaces the document body")
 
 
 class CreateEmailDraftRequest(BaseModel):
@@ -100,8 +105,8 @@ def root() -> dict[str, Any]:
     return {
         "status": "ok",
         "message": "Google MCP Server is running",
-        "endpoints": "/append_to_doc, /create_email_draft, /docs",
-        "build": "option-b-auth-env-v1",
+        "endpoints": "/append_to_doc, /replace_doc, /create_email_draft, /docs",
+        "build": "option-b-replace-doc-v1",
         "auto_approve": _should_auto_approve(),
         "google_env_auth_configured": has_env_auth,
     }
@@ -113,6 +118,19 @@ def append_to_doc_endpoint(request: AppendToDocRequest) -> dict[str, Any]:
     require_approval("append_to_doc", payload)
     try:
         result = append_to_doc(doc_id=request.doc_id, content=request.content)
+        return {"status": "success", "result": result}
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001 — surface API errors to the client
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/replace_doc")
+def replace_doc_endpoint(request: ReplaceDocRequest) -> dict[str, Any]:
+    payload = request.model_dump()
+    require_approval("replace_doc", payload)
+    try:
+        result = replace_doc(doc_id=request.doc_id, content=request.content)
         return {"status": "success", "result": result}
     except HTTPException:
         raise
