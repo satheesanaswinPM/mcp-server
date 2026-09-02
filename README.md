@@ -15,12 +15,13 @@ Before every tool call, the server prints the action name and payload.
 
 **Local terminal (interactive):** asks `Approve? (y/n):` — only `y` proceeds; anything else returns HTTP `403`.
 
-**Hosted / non-interactive (e.g. Railway):** automatically approves when stdin is not a TTY, or when `AUTO_APPROVE=1` is set. This avoids `input()` crashing the worker with HTTP 500.
+**Hosted / non-interactive (e.g. Railway):** automatically approves when:
 
-```bash
-# Optional explicit flag on Railway / Docker
-AUTO_APPROVE=1
-```
+- `AUTO_APPROVE=1`, or
+- `RAILWAY_ENVIRONMENT` / `RAILWAY_PROJECT_ID` is present (Railway deploy), or
+- stdin is not a TTY
+
+Set `REQUIRE_INTERACTIVE_APPROVAL=1` to force the local `y/n` prompt even in those environments.
 
 ## Project layout
 

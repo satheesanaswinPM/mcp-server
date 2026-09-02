@@ -36,14 +36,20 @@ def _env_flag(name: str) -> bool:
 
 
 def _should_auto_approve() -> bool:
-    """Auto-approve when explicitly enabled or when no interactive TTY is available.
+    """Auto-approve when explicitly enabled or when running without a real terminal.
 
-    Hosted platforms like Railway have no terminal for input(); without this
+    Hosted platforms like Railway have no usable terminal for input(); without this
     gate, require_approval() crashes with EOFError and returns HTTP 500.
+    Some containers still report a pseudo-TTY, so also detect Railway env vars.
     """
     if _env_flag("AUTO_APPROVE"):
         return True
-    # Non-interactive process (containers, CI, hosted web workers).
+    # Opt into interactive prompts only when explicitly requested.
+    if _env_flag("REQUIRE_INTERACTIVE_APPROVAL"):
+        return False
+    # Railway injects these in deployed services.
+    if os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID"):
+        return True
     return not sys.stdin.isatty()
 
 
@@ -56,7 +62,12 @@ def require_approval(action: str, payload: dict[str, Any]) -> None:
     print("=" * 60)
 
     if _should_auto_approve():
-        reason = "AUTO_APPROVE" if _env_flag("AUTO_APPROVE") else "non-interactive stdin"
+        if _env_flag("AUTO_APPROVE"):
+            reason = "AUTO_APPROVE"
+        elif os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID"):
+            reason = "railway"
+        else:
+            reason = "non-interactive stdin"
         print(f"Auto-approved ({reason}).")
         return
 
