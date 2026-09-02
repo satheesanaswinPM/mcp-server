@@ -11,13 +11,16 @@ A FastAPI MCP-style server that exposes Google Docs and Gmail tools with **human
 | `/` | `GET` | Health check |
 | `/docs` | `GET` | Interactive Swagger UI |
 
-Before every tool call, the server prints the action name and payload and asks:
+Before every tool call, the server prints the action name and payload.
 
-```text
-Approve? (y/n):
+**Local terminal (interactive):** asks `Approve? (y/n):` — only `y` proceeds; anything else returns HTTP `403`.
+
+**Hosted / non-interactive (e.g. Railway):** automatically approves when stdin is not a TTY, or when `AUTO_APPROVE=1` is set. This avoids `input()` crashing the worker with HTTP 500.
+
+```bash
+# Optional explicit flag on Railway / Docker
+AUTO_APPROVE=1
 ```
-
-Only `y` proceeds; anything else returns HTTP `403`.
 
 ## Project layout
 
@@ -132,7 +135,8 @@ You can also try the interactive UI at [http://127.0.0.1:8000/docs](http://127.0
 ## Security notes
 
 - Never commit `credentials.json` or `token.json` (both are in `.gitignore`).
-- Approval is local-terminal only; do not expose this server publicly without a real auth layer.
+- Local runs still use terminal approval by default.
+- On Railway/containers, non-interactive auto-approve is required for the API to work; protect the public URL (do not leave write endpoints open without auth if the service is exposed).
 - Gmail drafts are created only — nothing is sent until you send them in Gmail.
 
 ## Troubleshooting
